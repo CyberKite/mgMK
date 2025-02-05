@@ -58,15 +58,17 @@ case $1 in
             #ui_log "[DEBUG] (pwd): $(pwd)"
             # just some standard cleaning code, remove it if you need to.
             
-            
             # because -delete does funnies
             find "${build_path}" -type f -name '*~' -exec rm {} +
+            [ -d ${BUILDPATH}/.git       ] && rm -rf ${BUILDPATH}/.git
+            [ -f ${BUILDPATH}/.gitignore ] && rm -r ${BUILDPATH}/.gitignore
 
             # intentionally loaded after cleanup to let the user do some move ops as needed
             if [ -f "${build_path}/build.sh" ]; then
                 ui_log "executing custom build script"
                 export BUILDPATH=$build_path
                 "${build_path}/build.sh"
+                rm "${build_path}/build.sh"
             else
                 ui_log "no custom build scripts, also fine"
             fi
