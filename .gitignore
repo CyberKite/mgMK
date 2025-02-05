@@ -1,5 +1,2 @@
-# Ignore the modules directory and its contents
+# Ignore modules. This file struct was chosen poorly
 modules/*
-
-# Optionally, ignore files related to temporary or backup files
-*~
