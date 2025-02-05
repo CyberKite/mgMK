@@ -7,6 +7,7 @@ export mgmk_root="$(readlink -f "$mgmk_root")"
 export mgmk_home="$mgmk_root/modules"
 export mgmk_data="$mgmk_root/data"
 export mgmk_scripts="$mgmk_data/scripts"
+mkdir -p "$mgmk_home"
 
 export PATH="$mgmk_scripts:$PATH"
 cd "$mgmk_home"
