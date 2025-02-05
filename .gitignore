@@ -1,0 +1,5 @@
+# Ignore the modules directory and its contents
+modules/*
+
+# Optionally, ignore files related to temporary or backup files
+*~

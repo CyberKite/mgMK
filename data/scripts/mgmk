@@ -1,0 +1,139 @@
+#!/usr/bin/bash
+build_root="/tmp/${UID}/mgmk/build"
+blob_root="/tmp/${UID}/mgmk/zip"
+
+
+ui_log(){
+    echo "$@" 1>&2
+}
+
+modname(){
+    basename "$(readlink -f "$@")"
+}
+
+
+get_devices(){
+    devlist="$(adb devices | head -n -1 | tail -n +2 | grep "[a-z0-9]\+"$'\t'"device")"
+    if [ "$devlist" == "" ]; then
+        exit 1
+    fi
+    printf "$devlist\n"
+    exit 0
+}
+
+case $1 in
+    init)
+        ui_log "Initializing new module as $2"
+        cp -r "${mgmk_data}/template" "$mgmk_home/$2"
+        curl "https://raw.githubusercontent.com/topjohnwu/Magisk/refs/heads/master/scripts/module_installer.sh" > "${mgmk_home}/$2/META-INF/com/google/android/update-binary"
+    ;;
+    pack)
+        module_path="$2"
+        module_name="$(modname "${module_path}")"
+        #ui_log "[DEBUG] Module Name: ${module_name}"
+        (
+            cd "${module_path}"
+            mkdir -p "${blob_root}"
+            if [ -e "${blob_root}/${module_name}.zip" ]; then
+                rm "${blob_root}/${module_name}.zip"
+            fi
+            zip -r9 "${blob_root}/${module_name}.zip" * 1>&2
+        )
+        ui_log "Packed to ${blob_root}/${module_name}.zip"
+        echo "${blob_root}/${module_name}.zip"
+    ;;
+    build)
+        source_path="$2"
+        module_name="$(modname "$2")"
+        build_path="${build_root}/${module_name}"
+        if [ -e "${build_path}" ]; then
+            rm -r "${build_path}"
+        fi
+        mkdir -p "${build_path}"
+        cp -r "${source_path}/"* "$build_path/"
+
+        # protection against common problems
+        (
+            cd "${build_path}"
+            #ui_log "[DEBUG] (pwd): $(pwd)"
+            # just some standard cleaning code, remove it if you need to.
+            
+            
+            # because -delete does funnies
+            find "${build_path}" -type f -name '*~' -exec rm {} +
+
+            # intentionally loaded after cleanup to let the user do some move ops as needed
+            if [ -f "${build_path}/build.sh" ]; then
+                ui_log "executing custom build script"
+                export BUILDPATH=$build_path
+                "${build_path}/build.sh"
+            else
+                ui_log "no custom build scripts, also fine"
+            fi
+        )
+
+        ui_log "Beginning Pack Process"
+        mgmk pack "${build_path}"
+        # this gets a stdout anyway so no need to wrap
+    ;;
+    send)
+        if [ "$(get_devices | wc -l)" -ne 1 ]; then
+            echo "Target device ambiguous" >&2
+            exit 1
+        fi
+        adb push "$2" "/storage/emulated/0/Download/$(modname "$2")"
+    ;;
+    flash)
+        # halp
+        adb shell "su -c \"magisk --install-module \\\"$2\\\"\""
+    ;;
+    test)
+        module_zip="$(mgmk build "$2")"
+        echo "${module_zip}"
+        mgmk send "${module_zip}"
+        mgmk flash "/storage/emulated/0/Download/$(modname "${module_zip}")"
+        error="$?"
+        if [ "$3" != "norb" ] && [ "$error" == "0" ]; then
+            adb reboot &
+        fi
+    ;;
+    inc)
+        if [ "$3" == "" ]; then
+            file="./module.prop"
+        else
+            file="$3"
+        fi
+
+        # Extract current version and versionCode
+        oldver=$(grep -Eo '^version=v[0-9]+\.[0-9]+\.[0-9]+' "${file}" | cut -d= -f2)
+        oldvercode=$(grep -Eo '^versionCode=[0-9]+' "${file}" | cut -d= -f2)
+
+        semver=$(echo "${oldver}" | tr -d 'v')
+        IFS='.' read -r major minor patch <<< "${semver}"
+
+        # Increment based on type
+        if [[ $2 == "major" ]]; then
+            major=$((major + 1)); minor=0; patch=0
+        elif [[ $2 == "minor" ]]; then
+            minor=$((minor + 1)); patch=0
+        elif [[ $2 == "patch" ]]; then
+            patch=$((patch + 1))
+        else
+            ui_log "patch level $2 unrecognized"; exit 1
+        fi
+
+        newver="v${major}.${minor}.${patch}"
+        newvercode=$((oldvercode + 1))
+
+        # beautiful abomination
+        sed -i -E "s/^version=v[0-9]+\.[0-9]+\.[0-9]+/version=${newver}/" "${file}"
+        sed -i -E "s/^versionCode=[0-9]+/versionCode=${newvercode}/" "${file}"
+        ui_log "${oldver}(${oldvercode}) -> ${newver}(${newvercode})"
+    ;;
+    dev)
+        get_devices
+    ;;
+    *)
+        ui_log "unrecognized: $1"
+    ;;
+esac

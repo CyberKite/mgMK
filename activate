@@ -1,0 +1,17 @@
+#!/usr/bin/bash
+
+echo "Setting up MagiskMK v0:"
+
+export mgmk_root="$(dirname "$BASH_SOURCE")"
+export mgmk_root="$(readlink -f "$mgmk_root")"
+export mgmk_home="$mgmk_root/modules"
+export mgmk_data="$mgmk_root/data"
+export mgmk_scripts="$mgmk_data/scripts"
+
+export PATH="$mgmk_scripts:$PATH"
+cd "$mgmk_home"
+
+echo "root folder: $mgmk_root"
+echo "home folder: $mgmk_home"
+echo "data folder: $mgmk_data"
+echo "script folder: $mgmk_scripts"
