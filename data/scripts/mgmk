@@ -37,7 +37,7 @@ case $1 in
             if [ -e "${blob_root}/${module_name}.zip" ]; then
                 rm "${blob_root}/${module_name}.zip"
             fi
-            zip -r9 "${blob_root}/${module_name}.zip" * 1>&2
+            zip -r9q "${blob_root}/${module_name}.zip" * 1>&2
         )
         ui_log "Packed to ${blob_root}/${module_name}.zip"
         echo "${blob_root}/${module_name}.zip"
