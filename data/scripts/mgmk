@@ -95,7 +95,8 @@ case $1 in
         mgmk send "${module_zip}"
         mgmk flash "/storage/emulated/0/Download/$(modname "${module_zip}")"
         error="$?"
-        if [ "$3" != "norb" ] && [ "$error" == "0" ]; then
+        echo "error code: $error"
+        if [ "$3" != "norb" ] && [ "$error" == "0" ] || [ "$error" == "2" ]; then
             adb reboot &
         fi
     ;;
