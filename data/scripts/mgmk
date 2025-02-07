@@ -97,6 +97,8 @@ case $1 in
         error="$?"
         echo "error code: $error"
         if [ "$3" != "norb" ] && [ "$error" == "0" ] || [ "$error" == "2" ]; then
+            echo "rebooting."
+            echo "Use the 'norb' flag to do NO ReBoots"
             adb reboot &
         fi
     ;;
